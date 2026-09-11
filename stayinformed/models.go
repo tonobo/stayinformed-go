@@ -54,6 +54,15 @@ type NewsPage struct {
 }
 
 func (p NewsPage) HasMore(offset, pageSize int) bool {
+	// The upstream currently returns more="1" even after the last page. An
+	// empty page is always terminal, and the total count is more reliable when
+	// it is present.
+	if len(p.Items) == 0 {
+		return false
+	}
+	if p.Count > 0 {
+		return (offset+1)*pageSize < p.Count
+	}
 	if len(p.More) > 0 {
 		var boolean bool
 		if json.Unmarshal(p.More, &boolean) == nil {
@@ -68,9 +77,6 @@ func (p NewsPage) HasMore(offset, pageSize int) bool {
 				return false
 			}
 		}
-	}
-	if p.Count > 0 {
-		return (offset+1)*pageSize < p.Count
 	}
 	return len(p.Items) == pageSize
 }
