@@ -1,0 +1,5 @@
+/bin/
+/dist/
+*.ics
+*.state.json
+*.tmp
