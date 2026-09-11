@@ -1,11 +1,13 @@
 package message2mail
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -107,6 +109,8 @@ type IMAPMailbox struct {
 	config IMAPConfig
 }
 
+const recentHeaderScanLimit uint32 = 500
+
 func NewIMAPMailbox(config IMAPConfig) (*IMAPMailbox, error) {
 	if config.Address == "" || config.Username == "" || config.Password == "" {
 		return nil, errors.New("IMAP address, username, and password are required")
@@ -132,7 +136,8 @@ func (m *IMAPMailbox) Contains(ctx context.Context, revision string) (bool, erro
 	if err := client.Login(m.config.Username, m.config.Password).Wait(); err != nil {
 		return false, fmt.Errorf("authenticate to IMAP server: %w", err)
 	}
-	if _, err := client.Select(m.config.Mailbox, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
+	mailbox, err := client.Select(m.config.Mailbox, &imap.SelectOptions{ReadOnly: true}).Wait()
+	if err != nil {
 		return false, fmt.Errorf("select IMAP mailbox: %w", err)
 	}
 	select {
@@ -145,7 +150,47 @@ func (m *IMAPMailbox) Contains(ctx context.Context, revision string) (bool, erro
 	if err != nil {
 		return false, fmt.Errorf("search IMAP mailbox: %w", err)
 	}
-	return len(data.AllSeqNums()) > 0, nil
+	if len(data.AllSeqNums()) > 0 {
+		return true, nil
+	}
+	return scanRecentHeaders(client, mailbox.NumMessages, revision)
+}
+
+// scanRecentHeaders is a bounded fallback for servers whose SEARCH index does
+// not expose newly delivered custom headers immediately. Pending deliveries
+// are recent by definition, so fetching only the marker header from the newest
+// messages avoids both duplicate delivery and an unbounded mailbox download.
+func scanRecentHeaders(client *imapclient.Client, messageCount uint32, revision string) (bool, error) {
+	if messageCount == 0 {
+		return false, nil
+	}
+	start := uint32(1)
+	if messageCount > recentHeaderScanLimit {
+		start = messageCount - recentHeaderScanLimit + 1
+	}
+	section := &imap.FetchItemBodySection{
+		Specifier:    imap.PartSpecifierHeader,
+		HeaderFields: []string{"X-StayInformed-Revision"},
+		Peek:         true,
+	}
+	messages, err := client.Fetch(
+		imap.SeqSet{{Start: start, Stop: messageCount}},
+		&imap.FetchOptions{BodySection: []*imap.FetchItemBodySection{section}},
+	).Collect()
+	if err != nil {
+		return false, fmt.Errorf("fetch recent IMAP delivery markers: %w", err)
+	}
+	for _, message := range messages {
+		if headerContainsRevision(message.FindBodySection(section), revision) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func headerContainsRevision(header []byte, revision string) bool {
+	parsed, err := mail.ReadMessage(bytes.NewReader(header))
+	return err == nil && parsed.Header.Get("X-StayInformed-Revision") == revision
 }
 
 // Watch blocks in IMAP IDLE and coalesces mailbox changes into the trigger
