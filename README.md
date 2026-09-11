@@ -4,6 +4,9 @@
 
 `stayinformed-go` is an unofficial Go client and a set of small services for the Stay Informed parent application.
 
+> [!NOTE]
+> This project is almost entirely vibe-coded. Review the implementation and test it against your own account before relying on it.
+
 The project separates authentication, read-only API access, calendar conversion, and message delivery:
 
 ```text
