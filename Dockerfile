@@ -10,6 +10,8 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/webcal ./cmd/webca
     && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/stayinformed-token ./cmd/stayinformed-token
 
 FROM alpine:3.22
+LABEL org.opencontainers.image.source="https://github.com/tonobo/stayinformed-go"
+LABEL org.opencontainers.image.description="Stay Informed WebCal and message forwarding services"
 RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -g 65532 -S app \
     && adduser -u 65532 -S -D -H -G app app
