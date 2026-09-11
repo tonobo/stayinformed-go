@@ -1,0 +1,8 @@
+The chart expects an existing Secret named {{ required "credentials.existingSecret is required" .Values.credentials.existingSecret | quote }}.
+The Secret must contain keys {{ .Values.credentials.usernameKey | quote }} and {{ .Values.credentials.passwordKey | quote }}.
+
+The password is mounted only into the token sidecar. The application containers receive only a rotating access token through an in-memory emptyDir.
+
+{{- if .Values.message2mail.enabled }}
+message2mail uses a single replica with Recreate strategy. Its delivery ledger is stored on PVC {{ if .Values.message2mail.persistence.existingClaim }}{{ .Values.message2mail.persistence.existingClaim }}{{ else }}{{ include "stayinformed-go.fullname" . }}-message2mail{{ end }}.
+{{- end }}

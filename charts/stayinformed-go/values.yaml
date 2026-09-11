@@ -1,0 +1,109 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/tonobo/stayinformed-go
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+credentials:
+  # The chart never creates or stores account credentials. Create this Secret
+  # independently so Helm release data and Git history contain no password.
+  existingSecret: ""
+  usernameKey: username
+  passwordKey: password
+
+token:
+  organization: ""
+  locale: de
+  refreshBefore: 1m
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+webcal:
+  enabled: true
+  replicaCount: 1
+  calendarName: ""
+  language: de
+  timezone: Europe/Berlin
+  service:
+    port: 8787
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  tokenResources:
+    requests:
+      cpu: 5m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+  httpRoute:
+    enabled: false
+    annotations: {}
+    labels: {}
+    hostnames: []
+    parentRefs: []
+
+message2mail:
+  enabled: false
+  language: de
+  timezone: Europe/Berlin
+  subjectPrefix: "[Stay Informed] "
+  from: ""
+  to: []
+  forwardExisting: false
+  syncInterval: 30m
+  debounce: 5s
+  retryGrace: 15m
+  maxAttempts: 3
+  maxPages: 100
+  mail:
+    existingSecret: ""
+    usernameKey: username
+    passwordKey: password
+    imapAddress: ""
+    imapTLS: tls
+    imapMailbox: INBOX
+    smtpAddress: ""
+    smtpTLS: starttls
+  persistence:
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  tokenResources:
+    requests:
+      cpu: 5m
+      memory: 16Mi
+    limits:
+      memory: 64Mi

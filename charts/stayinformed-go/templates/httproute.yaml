@@ -1,0 +1,29 @@
+{{- if and .Values.webcal.enabled .Values.webcal.httpRoute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "stayinformed-go.fullname" . }}-webcal
+  labels:
+    {{- include "stayinformed-go.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webcal
+    {{- with .Values.webcal.httpRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.webcal.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- required "webcal.httpRoute.parentRefs is required when the route is enabled" .Values.webcal.httpRoute.parentRefs | toYaml | nindent 4 }}
+  hostnames:
+    {{- required "webcal.httpRoute.hostnames is required when the route is enabled" .Values.webcal.httpRoute.hostnames | toYaml | nindent 4 }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "stayinformed-go.fullname" . }}-webcal
+          port: {{ .Values.webcal.service.port }}
+{{- end }}

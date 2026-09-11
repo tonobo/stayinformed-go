@@ -1,0 +1,94 @@
+{{- if .Values.webcal.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stayinformed-go.fullname" . }}-webcal
+  labels:
+    {{- include "stayinformed-go.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webcal
+spec:
+  replicas: {{ .Values.webcal.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "stayinformed-go.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: webcal
+  template:
+    metadata:
+      labels:
+        {{- include "stayinformed-go.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: webcal
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "stayinformed-go.podPlacement" . | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: webcal
+          image: {{ include "stayinformed-go.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/webcal
+          args:
+            - --listen=0.0.0.0:8787
+            - --token-file=/run/stayinformed/access-token
+            - --language={{ .Values.webcal.language }}
+            - --timezone={{ .Values.webcal.timezone }}
+            {{- if .Values.webcal.calendarName }}
+            - --calendar-name={{ .Values.webcal.calendarName }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8787
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 12
+          resources:
+            {{- toYaml .Values.webcal.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: stayinformed-token
+              mountPath: /run/stayinformed
+              readOnly: true
+        {{- include "stayinformed-go.tokenContainer" (dict "root" . "resources" .Values.webcal.tokenResources) | nindent 8 }}
+      volumes:
+        - name: stayinformed-token
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: stayinformed-credentials
+          secret:
+            secretName: {{ required "credentials.existingSecret is required" .Values.credentials.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.credentials.passwordKey }}
+                path: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "stayinformed-go.fullname" . }}-webcal
+  labels:
+    {{- include "stayinformed-go.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webcal
+spec:
+  selector:
+    {{- include "stayinformed-go.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: webcal
+  ports:
+    - name: http
+      port: {{ .Values.webcal.service.port }}
+      targetPort: http
+{{- end }}

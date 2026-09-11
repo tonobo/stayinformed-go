@@ -1,0 +1,34 @@
+credentials:
+  existingSecret: stayinformed-credentials
+
+nodeSelector:
+  node-type: satellite-site
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: satellite
+    effect: NoSchedule
+
+webcal:
+  httpRoute:
+    enabled: true
+    labels:
+      auth.example.invalid/proxy: "true"
+    hostnames:
+      - calendar.example.invalid
+    parentRefs:
+      - name: edge
+        namespace: gateway-system
+        sectionName: https-example
+
+message2mail:
+  enabled: true
+  from: sender@example.invalid
+  to:
+    - recipient@example.invalid
+  mail:
+    existingSecret: mail-credentials
+    imapAddress: mail.example.invalid:993
+    smtpAddress: mail.example.invalid:587
+  persistence:
+    storageClass: longhorn

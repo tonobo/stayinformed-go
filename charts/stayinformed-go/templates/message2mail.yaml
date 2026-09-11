@@ -1,0 +1,107 @@
+{{- if .Values.message2mail.enabled }}
+{{- if and (not .Values.message2mail.persistence.enabled) (not .Values.message2mail.persistence.existingClaim) }}
+{{- fail "message2mail requires persistence.enabled or persistence.existingClaim" }}
+{{- end }}
+{{- $recipients := required "message2mail.to requires at least one recipient" .Values.message2mail.to }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stayinformed-go.fullname" . }}-message2mail
+  labels:
+    {{- include "stayinformed-go.labels" . | nindent 4 }}
+    app.kubernetes.io/component: message2mail
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "stayinformed-go.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: message2mail
+  template:
+    metadata:
+      labels:
+        {{- include "stayinformed-go.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: message2mail
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "stayinformed-go.podPlacement" . | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: message2mail
+          image: {{ include "stayinformed-go.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/message2mail
+          args:
+            - --token-command=cat /run/stayinformed/access-token
+            - --mail-password-command=cat /var/run/secrets/mail/password
+            - --imap-address={{ required "message2mail.mail.imapAddress is required" .Values.message2mail.mail.imapAddress }}
+            - --imap-tls={{ .Values.message2mail.mail.imapTLS }}
+            - --imap-mailbox={{ .Values.message2mail.mail.imapMailbox }}
+            - --smtp-address={{ required "message2mail.mail.smtpAddress is required" .Values.message2mail.mail.smtpAddress }}
+            - --smtp-tls={{ .Values.message2mail.mail.smtpTLS }}
+            - --from={{ required "message2mail.from is required" .Values.message2mail.from }}
+            {{- range $recipients }}
+            - --to={{ . }}
+            {{- end }}
+            - --subject-prefix={{ .Values.message2mail.subjectPrefix }}
+            - --state-file=/var/lib/stayinformed/message2mail.json
+            - --sync-interval={{ .Values.message2mail.syncInterval }}
+            - --debounce={{ .Values.message2mail.debounce }}
+            - --retry-grace={{ .Values.message2mail.retryGrace }}
+            - --max-attempts={{ .Values.message2mail.maxAttempts }}
+            - --max-pages={{ .Values.message2mail.maxPages }}
+            - --language={{ .Values.message2mail.language }}
+            - --timezone={{ .Values.message2mail.timezone }}
+            {{- if .Values.message2mail.forwardExisting }}
+            - --forward-existing
+            {{- end }}
+          env:
+            - name: MESSAGE2MAIL_MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "message2mail.mail.existingSecret is required" .Values.message2mail.mail.existingSecret }}
+                  key: {{ .Values.message2mail.mail.usernameKey }}
+          resources:
+            {{- toYaml .Values.message2mail.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: stayinformed-token
+              mountPath: /run/stayinformed
+              readOnly: true
+            - name: mail-credentials
+              mountPath: /var/run/secrets/mail
+              readOnly: true
+            - name: state
+              mountPath: /var/lib/stayinformed
+        {{- include "stayinformed-go.tokenContainer" (dict "root" . "resources" .Values.message2mail.tokenResources) | nindent 8 }}
+      volumes:
+        - name: stayinformed-token
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: stayinformed-credentials
+          secret:
+            secretName: {{ required "credentials.existingSecret is required" .Values.credentials.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.credentials.passwordKey }}
+                path: password
+        - name: mail-credentials
+          secret:
+            secretName: {{ required "message2mail.mail.existingSecret is required" .Values.message2mail.mail.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.message2mail.mail.passwordKey }}
+                path: password
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ if .Values.message2mail.persistence.existingClaim }}{{ .Values.message2mail.persistence.existingClaim }}{{ else }}{{ include "stayinformed-go.fullname" . }}-message2mail{{ end }}
+{{- end }}

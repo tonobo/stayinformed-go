@@ -1,0 +1,22 @@
+{{- if and .Values.message2mail.enabled .Values.message2mail.persistence.enabled (not .Values.message2mail.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "stayinformed-go.fullname" . }}-message2mail
+  labels:
+    {{- include "stayinformed-go.labels" . | nindent 4 }}
+    app.kubernetes.io/component: message2mail
+  {{- with .Values.message2mail.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.message2mail.persistence.accessModes | nindent 4 }}
+  {{- with .Values.message2mail.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.message2mail.persistence.size }}
+{{- end }}
