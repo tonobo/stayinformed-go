@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tonobo/stayinformed-go/message2mail"
+	"github.com/tonobo/stayinformed-go/internal/message2mail"
 	"github.com/tonobo/stayinformed-go/stayinformed"
 )
 

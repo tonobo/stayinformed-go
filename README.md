@@ -1,5 +1,7 @@
 # stayinformed-go
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/tonobo/stayinformed-go.svg)](https://pkg.go.dev/github.com/tonobo/stayinformed-go)
+
 `stayinformed-go` is an unofficial Go client and a set of small services for the Stay Informed parent application.
 
 The project separates authentication, read-only API access, calendar conversion, and message delivery:

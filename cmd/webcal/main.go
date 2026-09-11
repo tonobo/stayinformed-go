@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/tonobo/stayinformed-go/ical"
+	"github.com/tonobo/stayinformed-go/internal/webcal"
 	"github.com/tonobo/stayinformed-go/stayinformed"
-	"github.com/tonobo/stayinformed-go/webcal"
 )
 
 func main() {
