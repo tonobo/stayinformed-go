@@ -28,7 +28,7 @@ func TestCalendarFetchesProfileAndEvents(t *testing.T) {
 			if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 				t.Fatal(err)
 			}
-			fmt.Fprint(response, `{"items":[{"date":"2026-09-15","events":[{"id":"event-1","title":"Example","start":"2026-09-15T13:00:00","end":"2026-09-15T14:00:00"}]}]}`)
+			fmt.Fprint(response, `{"items":[{"date":"2026-09-15","events":[{"id":"event-1","title":"Example","start":"2026-09-15T13:00:00","end":"2026-09-15T14:00:00","groups":[{"id":"group-1","name":"Class A"}]}]}]}`)
 		default:
 			http.NotFound(response, request)
 		}
@@ -45,5 +45,8 @@ func TestCalendarFetchesProfileAndEvents(t *testing.T) {
 	}
 	if requests != 2 || calendar.Name != "Example Calendar" || len(calendar.Events) != 1 || calendar.Events[0].ID != "event-1" {
 		t.Fatalf("unexpected calendar: %+v", calendar)
+	}
+	if len(calendar.Events[0].Groups) != 1 || calendar.Events[0].Groups[0].Name != "Class A" {
+		t.Fatalf("unexpected event groups: %+v", calendar.Events[0].Groups)
 	}
 }

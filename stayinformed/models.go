@@ -22,6 +22,12 @@ type Association struct {
 	Logo string `json:"logo"`
 }
 
+// Group identifies an audience assigned to an event or news item.
+type Group struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type Calendar struct {
 	Name               string
 	Timezone           string
@@ -30,19 +36,19 @@ type Calendar struct {
 }
 
 type Event struct {
-	ID       string            `json:"id"`
-	Title    string            `json:"title"`
-	Content  string            `json:"content"`
-	Venue    string            `json:"venue"`
-	Start    string            `json:"start"`
-	End      string            `json:"end"`
-	Modified string            `json:"modified"`
-	Type     string            `json:"type"`
-	Status   *string           `json:"status"`
-	AllDay   bool              `json:"allDay"`
-	Deleted  bool              `json:"deleted"`
-	Updated  bool              `json:"updated"`
-	Groups   []json.RawMessage `json:"groups"`
+	ID       string  `json:"id"`
+	Title    string  `json:"title"`
+	Content  string  `json:"content"`
+	Venue    string  `json:"venue"`
+	Start    string  `json:"start"`
+	End      string  `json:"end"`
+	Modified string  `json:"modified"`
+	Type     string  `json:"type"`
+	Status   *string `json:"status"`
+	AllDay   bool    `json:"allDay"`
+	Deleted  bool    `json:"deleted"`
+	Updated  bool    `json:"updated"`
+	Groups   []Group `json:"groups"`
 }
 
 type NewsPage struct {
@@ -82,35 +88,35 @@ func (p NewsPage) HasMore(offset, pageSize int) bool {
 }
 
 type News struct {
-	ID                           string            `json:"id"`
-	ObjectID                     string            `json:"_id"`
-	Title                        string            `json:"title"`
-	Content                      string            `json:"content"`
-	Date                         string            `json:"date"`
-	DeadlineDate                 string            `json:"deadline_date"`
-	Poster                       string            `json:"poster"`
-	Type                         string            `json:"type"`
-	ReceiverType                 string            `json:"receiver_type"`
-	Read                         string            `json:"read"`
-	HasAttachments               bool              `json:"attachment"`
-	Attachments                  []Attachment      `json:"attachments"`
-	Groups                       []json.RawMessage `json:"groups"`
-	Important                    bool              `json:"important"`
-	Deadline                     bool              `json:"deadline"`
-	HTMLContent                  bool              `json:"is_html_content"`
-	Hidden                       bool              `json:"is_hidden"`
-	Pinned                       bool              `json:"is_pinned"`
-	Sharing                      bool              `json:"sharing"`
-	ResponseNoLongerPossible     bool              `json:"is_response_no_longer_possible"`
-	ResponseType                 string            `json:"response_type"`
-	Answered                     bool              `json:"answered"`
-	VideoURL                     *string           `json:"videoUrl"`
-	VideoThumbnail               *string           `json:"videoThumbnail"`
-	VideoType                    *string           `json:"videoType"`
-	OverrideAnswered             bool              `json:"override_answered"`
-	InAppTranslatorIsActive      bool              `json:"in_app_translator_is_active"`
-	ResponseAnswered             bool              `json:"response_answered"`
-	IsResponseNoLongerPossibleV2 bool              `json:"response_no_longer_possible"`
+	ID                           string       `json:"id"`
+	ObjectID                     string       `json:"_id"`
+	Title                        string       `json:"title"`
+	Content                      string       `json:"content"`
+	Date                         string       `json:"date"`
+	DeadlineDate                 string       `json:"deadline_date"`
+	Poster                       string       `json:"poster"`
+	Type                         string       `json:"type"`
+	ReceiverType                 string       `json:"receiver_type"`
+	Read                         string       `json:"read"`
+	HasAttachments               bool         `json:"attachment"`
+	Attachments                  []Attachment `json:"attachments"`
+	Groups                       []Group      `json:"groups"`
+	Important                    bool         `json:"important"`
+	Deadline                     bool         `json:"deadline"`
+	HTMLContent                  bool         `json:"is_html_content"`
+	Hidden                       bool         `json:"is_hidden"`
+	Pinned                       bool         `json:"is_pinned"`
+	Sharing                      bool         `json:"sharing"`
+	ResponseNoLongerPossible     bool         `json:"is_response_no_longer_possible"`
+	ResponseType                 string       `json:"response_type"`
+	Answered                     bool         `json:"answered"`
+	VideoURL                     *string      `json:"videoUrl"`
+	VideoThumbnail               *string      `json:"videoThumbnail"`
+	VideoType                    *string      `json:"videoType"`
+	OverrideAnswered             bool         `json:"override_answered"`
+	InAppTranslatorIsActive      bool         `json:"in_app_translator_is_active"`
+	ResponseAnswered             bool         `json:"response_answered"`
+	IsResponseNoLongerPossibleV2 bool         `json:"response_no_longer_possible"`
 }
 
 func (n News) Identifier() string {
