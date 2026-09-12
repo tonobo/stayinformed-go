@@ -28,7 +28,7 @@ func TestCalendarFetchesProfileAndEvents(t *testing.T) {
 			if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 				t.Fatal(err)
 			}
-			fmt.Fprint(response, `{"items":[{"date":"2026-09-15","events":[{"id":"event-1","title":"Example","start":"2026-09-15T13:00:00","end":"2026-09-15T14:00:00","groups":[{"id":"group-1","name":"Class A"}]}]}]}`)
+			fmt.Fprint(response, `{"items":[{"date":"2026-09-15","events":[{"id":"event-1","title":"Example","start":"2026-09-15T13:00:00","end":"2026-09-15T14:00:00","groups":[{"id":"group-1","name":"Class A","hidden":false}]}]}]}`)
 		default:
 			http.NotFound(response, request)
 		}

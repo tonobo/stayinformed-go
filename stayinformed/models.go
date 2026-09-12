@@ -1,6 +1,10 @@
 package stayinformed
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+)
 
 type Profile struct {
 	UserID            string        `json:"id"`
@@ -24,8 +28,9 @@ type Association struct {
 
 // Group identifies an audience assigned to an event or news item.
 type Group struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Hidden bool   `json:"hidden"`
 }
 
 type Calendar struct {
@@ -49,6 +54,11 @@ type Event struct {
 	Deleted  bool    `json:"deleted"`
 	Updated  bool    `json:"updated"`
 	Groups   []Group `json:"groups"`
+}
+
+// GroupNames returns normalized, deterministic audience labels.
+func (event Event) GroupNames() []string {
+	return groupNames(event.Groups)
 }
 
 type NewsPage struct {
@@ -88,35 +98,46 @@ func (p NewsPage) HasMore(offset, pageSize int) bool {
 }
 
 type News struct {
-	ID                           string       `json:"id"`
-	ObjectID                     string       `json:"_id"`
-	Title                        string       `json:"title"`
-	Content                      string       `json:"content"`
-	Date                         string       `json:"date"`
-	DeadlineDate                 string       `json:"deadline_date"`
-	Poster                       string       `json:"poster"`
-	Type                         string       `json:"type"`
-	ReceiverType                 string       `json:"receiver_type"`
-	Read                         string       `json:"read"`
-	HasAttachments               bool         `json:"attachment"`
-	Attachments                  []Attachment `json:"attachments"`
-	Groups                       []Group      `json:"groups"`
-	Important                    bool         `json:"important"`
-	Deadline                     bool         `json:"deadline"`
-	HTMLContent                  bool         `json:"is_html_content"`
-	Hidden                       bool         `json:"is_hidden"`
-	Pinned                       bool         `json:"is_pinned"`
-	Sharing                      bool         `json:"sharing"`
-	ResponseNoLongerPossible     bool         `json:"is_response_no_longer_possible"`
-	ResponseType                 string       `json:"response_type"`
-	Answered                     bool         `json:"answered"`
-	VideoURL                     *string      `json:"videoUrl"`
-	VideoThumbnail               *string      `json:"videoThumbnail"`
-	VideoType                    *string      `json:"videoType"`
-	OverrideAnswered             bool         `json:"override_answered"`
-	InAppTranslatorIsActive      bool         `json:"in_app_translator_is_active"`
-	ResponseAnswered             bool         `json:"response_answered"`
-	IsResponseNoLongerPossibleV2 bool         `json:"response_no_longer_possible"`
+	ID                       string            `json:"id"`
+	ObjectID                 string            `json:"_id"`
+	Title                    string            `json:"title"`
+	Content                  string            `json:"content"`
+	Date                     string            `json:"date"`
+	DeadlineDate             string            `json:"deadline_date"`
+	Poster                   string            `json:"poster"`
+	Type                     string            `json:"type"`
+	ReceiverType             string            `json:"receiver_type"`
+	Read                     string            `json:"read"`
+	HasAttachments           bool              `json:"attachment"`
+	Attachments              []Attachment      `json:"attachments"`
+	Groups                   []Group           `json:"groups"`
+	Important                bool              `json:"important"`
+	Deadline                 bool              `json:"deadline"`
+	Favourite                bool              `json:"favourite"`
+	HTMLContent              bool              `json:"is_html_content"`
+	Hidden                   bool              `json:"is_hidden"`
+	Pinned                   bool              `json:"is_pinned"`
+	Sharing                  bool              `json:"sharing"`
+	Mode                     string            `json:"mode"`
+	ResponseNoLongerPossible bool              `json:"is_response_no_longer_possible"`
+	ResponseType             string            `json:"response_type"`
+	Answered                 bool              `json:"answered"`
+	AnsweredMemberIDs        []json.RawMessage `json:"answeredMemberIds"`
+	AnsweredMemberOtherIDs   []json.RawMessage `json:"answeredMemberOtherIds"`
+	Options                  []json.RawMessage `json:"options"`
+	Responses                []json.RawMessage `json:"responses"`
+	PDFs                     []Attachment      `json:"pdfs"`
+	ShowChildName            bool              `json:"show_child_name"`
+	ShowClass                bool              `json:"show_class"`
+	ShowComment              bool              `json:"show_comment"`
+	ShowSignature            bool              `json:"show_signature"`
+	VideoID                  *string           `json:"videoId"`
+	VideoURL                 *string           `json:"videoUrl"`
+	VideoThumbnail           *string           `json:"videoThumbnail"`
+	VideoType                *string           `json:"videoType"`
+	OverrideAnswered         bool              `json:"override_answered"`
+	InAppTranslatorIsActive  bool              `json:"in_app_translator_is_active"`
+	ResponseAnswered         bool              `json:"response_answered"`
 }
 
 func (n News) Identifier() string {
@@ -124,6 +145,30 @@ func (n News) Identifier() string {
 		return n.ID
 	}
 	return n.ObjectID
+}
+
+// GroupNames returns normalized, deterministic audience labels.
+func (n News) GroupNames() []string {
+	return groupNames(n.Groups)
+}
+
+func groupNames(groups []Group) []string {
+	seen := make(map[string]struct{}, len(groups))
+	names := make([]string, 0, len(groups))
+	for _, group := range groups {
+		name := strings.TrimSpace(group.Name)
+		if name == "" {
+			continue
+		}
+		key := strings.ToLower(name)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 type Attachment struct {

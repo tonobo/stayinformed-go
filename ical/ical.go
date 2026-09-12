@@ -123,7 +123,7 @@ func writeEvent(output *strings.Builder, event stayinformed.Event, location *tim
 		writeLine(output, "DTEND:"+end.UTC().Format("20060102T150405Z"))
 	}
 	writeLine(output, "SUMMARY:"+escapeText(event.Title))
-	if groups := groupNames(event.Groups); len(groups) > 0 {
+	if groups := event.GroupNames(); len(groups) > 0 {
 		writeLine(output, "CATEGORIES:"+escapeTextList(groups))
 	}
 	if text := plainText(event.Content); text != "" {
@@ -143,25 +143,6 @@ func writeEvent(output *strings.Builder, event stayinformed.Event, location *tim
 	writeLine(output, "TRANSP:TRANSPARENT")
 	writeLine(output, "END:VEVENT")
 	return nil
-}
-
-func groupNames(groups []stayinformed.Group) []string {
-	seen := make(map[string]struct{}, len(groups))
-	names := make([]string, 0, len(groups))
-	for _, group := range groups {
-		name := strings.TrimSpace(group.Name)
-		if name == "" {
-			continue
-		}
-		key := strings.ToLower(name)
-		if _, exists := seen[key]; exists {
-			continue
-		}
-		seen[key] = struct{}{}
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }
 
 func deduplicate(events []stayinformed.Event) []stayinformed.Event {

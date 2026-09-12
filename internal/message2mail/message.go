@@ -59,7 +59,10 @@ func Revision(news stayinformed.News) string {
 	parts := []string{
 		news.Identifier(), news.Title, news.Content, news.Date, news.DeadlineDate,
 		news.Poster, news.Type, news.ReceiverType, fmt.Sprint(news.Important),
-		fmt.Sprint(news.HTMLContent),
+		fmt.Sprint(news.Deadline), news.ResponseType, fmt.Sprint(news.Answered),
+		fmt.Sprint(news.ShowChildName), fmt.Sprint(news.ShowClass),
+		fmt.Sprint(news.ShowComment), fmt.Sprint(news.ShowSignature),
+		fmt.Sprint(news.HTMLContent), strings.Join(news.GroupNames(), "\x00"),
 	}
 	attachments := append([]stayinformed.Attachment(nil), news.Attachments...)
 	sort.Slice(attachments, func(i, j int) bool { return attachments[i].ID < attachments[j].ID })
@@ -107,6 +110,27 @@ func BuildMessage(news stayinformed.News, attachments []MailAttachment, options 
 	writeHeader(&output, "X-Auto-Response-Suppress", "All")
 	writeHeader(&output, "X-StayInformed-News-ID", safeHeader(news.Identifier()))
 	writeHeader(&output, "X-StayInformed-Revision", revision)
+	if groups := news.GroupNames(); len(groups) > 0 {
+		encodedGroups := encodeHeaderWords(groups)
+		writeHeader(&output, "Keywords", encodedGroups)
+		writeHeader(&output, "X-StayInformed-Groups", encodedGroups)
+	}
+	if news.Poster != "" {
+		writeHeader(&output, "X-StayInformed-Poster", encodeHeaderWord(news.Poster))
+	}
+	if news.Type != "" {
+		writeHeader(&output, "X-StayInformed-Type", news.Type)
+	}
+	if news.ReceiverType != "" {
+		writeHeader(&output, "X-StayInformed-Receiver-Type", news.ReceiverType)
+	}
+	if news.DeadlineDate != "" {
+		writeHeader(&output, "X-StayInformed-Deadline", news.DeadlineDate)
+	}
+	if news.Important {
+		writeHeader(&output, "Importance", "high")
+		writeHeader(&output, "X-Priority", "1")
+	}
 
 	alternativeType, alternativeBody, err := buildAlternative(news)
 	if err != nil {
@@ -153,7 +177,7 @@ func buildAlternative(news stayinformed.News) (string, []byte, error) {
 		return "", nil, err
 	}
 	plainWriter := quotedprintable.NewWriter(plainPart)
-	if _, err := plainWriter.Write([]byte(messagePlainText(news.Content))); err != nil {
+	if _, err := plainWriter.Write([]byte(messagePlainText(news))); err != nil {
 		return "", nil, err
 	}
 	if err := plainWriter.Close(); err != nil {
@@ -172,7 +196,7 @@ func buildAlternative(news stayinformed.News) (string, []byte, error) {
 	if !news.HTMLContent {
 		body = "<pre style=\"white-space:pre-wrap\">" + html.EscapeString(news.Content) + "</pre>"
 	}
-	if _, err := htmlWriter.Write([]byte("<!doctype html><html><body>" + body + "</body></html>")); err != nil {
+	if _, err := htmlWriter.Write([]byte("<!doctype html><html><body>" + messageHTMLMetadata(news) + body + "</body></html>")); err != nil {
 		return "", nil, err
 	}
 	if err := htmlWriter.Close(); err != nil {
@@ -215,6 +239,20 @@ func writeHeader(output *bytes.Buffer, name, value string) {
 
 func safeHeader(value string) string {
 	return strings.TrimSpace(strings.NewReplacer("\r", " ", "\n", " ").Replace(value))
+}
+
+func encodeHeaderWord(value string) string {
+	return mime.QEncoding.Encode("utf-8", safeHeader(value))
+}
+
+func encodeHeaderWords(values []string) string {
+	encoded := make([]string, 0, len(values))
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" {
+			encoded = append(encoded, encodeHeaderWord(value))
+		}
+	}
+	return strings.Join(encoded, ", ")
 }
 
 func safeFilename(value string) string {
@@ -260,7 +298,80 @@ func parseMessageDate(value, timezone string) time.Time {
 	return time.Now()
 }
 
-func messagePlainText(value string) string {
+type messageMetadataField struct {
+	label string
+	value string
+}
+
+func messageMetadata(news stayinformed.News) []messageMetadataField {
+	fields := make([]messageMetadataField, 0, 7)
+	add := func(label, value string) {
+		if value = strings.TrimSpace(value); value != "" {
+			fields = append(fields, messageMetadataField{label: label, value: value})
+		}
+	}
+	add("Published by", news.Poster)
+	add("Groups", strings.Join(news.GroupNames(), ", "))
+	add("Type", news.Type)
+	add("Audience", news.ReceiverType)
+	if news.Important {
+		add("Important", "yes")
+	}
+	if news.Deadline || news.DeadlineDate != "" {
+		add("Deadline", news.DeadlineDate)
+	}
+	if news.ResponseType != "" {
+		response := news.ResponseType
+		if news.Answered {
+			response += " (submitted)"
+		}
+		add("Response", response)
+	}
+	var responseFields []string
+	for _, field := range []struct {
+		show bool
+		name string
+	}{
+		{news.ShowChildName, "child name"},
+		{news.ShowClass, "class"},
+		{news.ShowComment, "comment"},
+		{news.ShowSignature, "signature"},
+	} {
+		if field.show {
+			responseFields = append(responseFields, field.name)
+		}
+	}
+	add("Response fields", strings.Join(responseFields, ", "))
+	return fields
+}
+
+func messagePlainText(news stayinformed.News) string {
+	var output strings.Builder
+	for _, field := range messageMetadata(news) {
+		fmt.Fprintf(&output, "%s: %s\n", field.label, field.value)
+	}
+	if output.Len() > 0 {
+		output.WriteString("\n")
+	}
+	output.WriteString(messageContentPlainText(news.Content))
+	return strings.TrimSpace(output.String())
+}
+
+func messageHTMLMetadata(news stayinformed.News) string {
+	fields := messageMetadata(news)
+	if len(fields) == 0 {
+		return ""
+	}
+	var output strings.Builder
+	output.WriteString("<dl>")
+	for _, field := range fields {
+		output.WriteString("<dt><strong>" + html.EscapeString(field.label) + "</strong></dt><dd>" + html.EscapeString(field.value) + "</dd>")
+	}
+	output.WriteString("</dl><hr>")
+	return output.String()
+}
+
+func messageContentPlainText(value string) string {
 	value = messageBreakPattern.ReplaceAllString(value, "\n")
 	value = messageBlockPattern.ReplaceAllString(value, "\n")
 	value = messageTagPattern.ReplaceAllString(value, "")
