@@ -66,9 +66,11 @@ webcal --listen 0.0.0.0:8787 --token-file /run/stayinformed/access-token
 
 This separation is security-critical: the reverse proxy owns the incoming `Authorization` header while webcal uses only the rotating token file for the upstream API.
 
+Event audiences are emitted as standard iCalendar `CATEGORIES` values. Titles remain unchanged, so calendar clients can decide how prominently to display the group information.
+
 ### message2mail
 
-`message2mail` lists news, renders MIME messages with attachments, submits them through authenticated SMTP, and confirms delivery by searching a target mailbox over IMAP. It also listens for IMAP IDLE changes and performs a bounded periodic fallback sync.
+`message2mail` lists news, renders MIME messages with attachments, submits them through authenticated SMTP, and confirms delivery by searching a target mailbox over IMAP. It also listens for IMAP IDLE changes and performs a bounded periodic fallback sync. Publisher, groups, message type, audience, priority, deadline, and response metadata are retained in the message body and dedicated headers. Groups additionally use the standard `Keywords` header.
 
 Run `message2mail -h` for all connection, state, retry, and bootstrap options. On the first run, existing messages are recorded without forwarding. Set `--forward-existing` only when intentionally importing the existing archive.
 
