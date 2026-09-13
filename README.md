@@ -70,7 +70,7 @@ Event audiences are emitted as standard iCalendar `CATEGORIES` values. Titles re
 
 ### message2mail
 
-`message2mail` lists news, renders MIME messages with attachments, submits them through authenticated SMTP, and confirms delivery by searching a target mailbox over IMAP. It also listens for IMAP IDLE changes and performs a bounded periodic fallback sync. Publisher, groups, message type, audience, priority, deadline, and response metadata are retained in the message body and dedicated headers. Groups additionally use the standard `Keywords` header.
+`message2mail` lists news, renders MIME messages with attachments, submits them through authenticated SMTP, and confirms delivery by searching a target mailbox over IMAP. It also listens for IMAP IDLE changes and performs a bounded periodic fallback sync. Publisher, groups, message type, audience, priority, deadline, and response metadata are retained in the message body and dedicated headers. Groups additionally use the standard `Keywords` header. Attachment parameters contain both a readable ASCII fallback and the exact RFC 2231 UTF-8 filename for compatibility with older mail clients.
 
 Run `message2mail -h` for all connection, state, retry, and bootstrap options. On the first run, existing messages are recorded without forwarding. Set `--forward-existing` only when intentionally importing the existing archive.
 

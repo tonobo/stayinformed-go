@@ -97,7 +97,7 @@ func BuildMessage(news stayinformed.News, attachments []MailAttachment, options 
 	}
 	messageID := fmt.Sprintf("<stayinformed.%s.%s@%s>", safeToken(news.Identifier()), revision[:20], domain)
 	date := parseMessageDate(news.Date, options.Timezone)
-	subject := strings.TrimSpace(options.SubjectPrefix + news.Title)
+	subject := strings.TrimSpace(strings.TrimSpace(options.SubjectPrefix) + " " + strings.TrimSpace(news.Title))
 
 	var output bytes.Buffer
 	writeHeader(&output, "Date", date.Format(time.RFC1123Z))
@@ -215,8 +215,8 @@ func writeAttachment(writer *multipart.Writer, attachment MailAttachment) error 
 	}
 	name := safeFilename(attachment.Name)
 	header := textproto.MIMEHeader{}
-	header.Set("Content-Type", mime.FormatMediaType(contentType, map[string]string{"name": name}))
-	header.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
+	header.Set("Content-Type", formatMediaTypeWithFilename(contentType, "name", name))
+	header.Set("Content-Disposition", formatMediaTypeWithFilename("attachment", "filename", name))
 	header.Set("Content-Transfer-Encoding", "base64")
 	part, err := writer.CreatePart(header)
 	if err != nil {
@@ -265,6 +265,43 @@ func safeFilename(value string) string {
 		return "attachment.bin"
 	}
 	return value
+}
+
+// formatMediaTypeWithFilename emits both a readable ASCII fallback and the
+// exact RFC 2231 UTF-8 value. Some otherwise capable clients still display
+// the encoded parameter literally when no legacy fallback is present.
+func formatMediaTypeWithFilename(mediaType, parameter, filename string) string {
+	fallback := asciiFilenameFallback(filename)
+	formatted := mime.FormatMediaType(mediaType, map[string]string{parameter: fallback})
+	if fallback == filename {
+		return formatted
+	}
+	exact := mime.FormatMediaType(mediaType, map[string]string{parameter: filename})
+	if separator := strings.Index(exact, "; "); separator >= 0 {
+		formatted += exact[separator:]
+	}
+	return formatted
+}
+
+func asciiFilenameFallback(value string) string {
+	value = strings.NewReplacer(
+		"\u00c4", "Ae", "\u00d6", "Oe", "\u00dc", "Ue",
+		"\u00e4", "ae", "\u00f6", "oe", "\u00fc", "ue", "\u00df", "ss",
+	).Replace(value)
+	var output strings.Builder
+	lastReplacement := false
+	for _, character := range value {
+		if character >= 0x20 && character <= 0x7e {
+			output.WriteRune(character)
+			lastReplacement = false
+			continue
+		}
+		if !lastReplacement {
+			output.WriteByte('_')
+			lastReplacement = true
+		}
+	}
+	return safeFilename(output.String())
 }
 
 func safeToken(value string) string {
